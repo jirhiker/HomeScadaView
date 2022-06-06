@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HomeScada</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@0.1.1"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2" crossorigin="anonymous"></script>
+
+    <script src={{ url_for('static', filename="js/chart.js") }}></script>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <table>
+                <tr>
+                    <td>Last Update</td>
+                    <td id="lastUpdate"></td>
+                </tr>
+                <tr>
+                    <td>Last Refresh</td>
+                    <td id="lastRefresh"></td>
+                </tr>
+                <tr>
+                    <td>Clock</td>
+                    <td id="clock"></td>
+                </tr>
+                <tr>
+                    <td>Elapsed (s)</td>
+                    <td id="elapsed"></td>
+                    <td>Count down (s)</td>
+                    <td id="countdown"></td>
+                </tr>
+            </table>
+        </div>
+        <div class="row">
+            <canvas id="soilMoisture" width="400" height="100"></canvas>
+        </div>
+        <div class="row">
+            <div class="col-lg-6"><canvas id="solarVoltage"></canvas></div>
+            <div class="col-lg-6"><canvas id="batteryVoltage"></canvas></div>
+        </div>
+{#        <div class="row">#}
+{#            <div class="col-lg-6"><canvas id="batteryVoltage"></canvas></div>#}
+{#        </div>#}
+    </div>
+
+{#<div id="info"></div>#}
+{#<div id="lastUpdate"></div>#}
+{#<div id="clock"></div>#}
+
+
+
+
+
+<script>
+
+
+    const sm = makeChart('soilMoisture')
+    const sv = makeChart('solarVoltage')
+    const bv = makeChart('batteryVoltage')
+    ajax_observations('Soil Moisture', 1, sm);
+    ajax_observations('Solar Voltage', 2, sv);
+    ajax_observations('Battery Voltage', 3, bv);
+    let lastUpdate;
+
+    var clockId = setInterval(function(){
+
+        let d = new Date()
+
+        {#d.setHours(d.getHours()-6)#}
+        document.getElementById('clock').innerHTML = d.toLocaleString()
+        document.getElementById('elapsed').innerHTML = ((Date.now() - lastUpdate)/1000-(6*60*60)).toFixed(1)
+        document.getElementById('countdown').innerHTML = (130-((Date.now() - lastUpdate)/1000-(6*60*60))).toFixed(1)
+
+
+    }, 1000)
+
+    var intervalId = setInterval(function() {
+        fetch('http://192.168.1.12:8080/FROST-Server/v1.1/' +
+            'Datastreams(1)/Observations?$orderby=phenomenonTime desc&$top=1'
+        ).then(response=>response.json()
+        ).then(rdata=>{
+
+            let d = rdata['value'][0]['phenomenonTime']
+            lastUpdate = Date.parse(d)
+            document.getElementById('lastUpdate').innerHTML = d.toLocaleString()
+        })
+
+        let d = new Date()
+
+        document.getElementById('lastRefresh').innerHTML = d.toLocaleString()
+
+        ajax_observations('Soil Moisture', 1, sm);
+        ajax_observations('Solar Voltage', 2, sv);
+        ajax_observations('Battery Voltage', 3, bv);
+    }, 5000);
+
+</script>
+</body>
+</html>
